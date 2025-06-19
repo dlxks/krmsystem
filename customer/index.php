@@ -209,67 +209,61 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['form_type']) && $_POS
     }
 }
 
-// --- PHP for handling Feedback Form Submission ---
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['form_type']) && $_POST['form_type'] === 'feedback') {
-    $name = mysqli_real_escape_string($conn, $_POST['name']);
-    $phoneNumber = mysqli_real_escape_string($conn, $_POST['phoneNum']);
-    $rentedCar = mysqli_real_escape_string($conn, $_POST['rentedCar']); // This is car ID
-    $rating = mysqli_real_escape_string($conn, $_POST['rating']);
-    $comments = mysqli_real_escape_string($conn, $_POST['feedback']);
+$customer_id = $_SESSION['customer_id'];
 
-    $sql_insert_feedback = "INSERT INTO feedbacks (name, phone_number, car_id, rating, comments) VALUES (?, ?, ?, ?, ?)";
-    $stmt_insert_feedback = mysqli_prepare($conn, $sql_insert_feedback);
+// Fetch reservations with car and customer info
+$reservation_sql = "
+    SELECT r.*, c.make, c.model, c.year, cust.name AS customer_name, cust.phone_number
+    FROM reservations r
+    JOIN cars c ON r.car_id = c.id
+    JOIN customers cust ON r.customer_id = cust.id
+    WHERE r.customer_id = ?
+    ORDER BY r.created_at DESC
+";
+$res_stmt = mysqli_prepare($conn, $reservation_sql);
+mysqli_stmt_bind_param($res_stmt, "i", $customer_id);
+mysqli_stmt_execute($res_stmt);
+$res_result = mysqli_stmt_get_result($res_stmt);
+$reservations = mysqli_fetch_all($res_result, MYSQLI_ASSOC);
+mysqli_stmt_close($res_stmt);
 
-    if ($stmt_insert_feedback) {
-        mysqli_stmt_bind_param($stmt_insert_feedback, "ssiis", $name, $phoneNumber, $rentedCar, $rating, $comments);
-        if (mysqli_stmt_execute($stmt_insert_feedback)) {
-            set_message('Feedback submitted successfully!', 'success');
-            // Redirect to self to clear POST data and show message
-            header("Location: index.php?tab=feedback");
-            exit();
-        } else {
-            set_message('Error submitting feedback: ' . mysqli_error($conn), 'error');
-            error_log('[KRM ERROR] Error submitting feedback: ' . mysqli_error($conn));
-        }
-        mysqli_stmt_close($stmt_insert_feedback);
-    } else {
-        set_message('Error preparing feedback insert statement: ' . mysqli_error($conn), 'error');
-        error_log('[KRM ERROR] Error preparing feedback insert statement: ' . mysqli_error($conn));
-    }
-}
+// Check for pending feedbacks  
+$pending_feedbacks = [];
 
-$sql_fetch_admin_about = "SELECT name, email, phone, location, profile_photo_path, license_image_path FROM admins WHERE id = 1"; // Assuming admin ID 1
-$result_fetch_admin_about = mysqli_query($conn, $sql_fetch_admin_about);
-if ($result_fetch_admin_about && mysqli_num_rows($result_fetch_admin_about) > 0) {
-    $admin_data_about = mysqli_fetch_assoc($result_fetch_admin_about);
-    $admin_name_about = htmlspecialchars($admin_data_about['name']);
-    $admin_email_about = htmlspecialchars($admin_data_about['email']);
-    $admin_phone_about = htmlspecialchars($admin_data_about['phone']);
-    $admin_location_about = htmlspecialchars($admin_data_about['location']);
+// Fetch pending feedbacks
+$sql = "
+    SELECT f.id AS feedback_id, r.id AS reservation_id, c.make, c.model, c.year
+    FROM feedbacks f
+    JOIN reservations r ON f.reservation_id = r.id
+    JOIN cars c ON f.car_id = c.id
+    WHERE f.customer_id = ? AND f.status = 'pending'
+";
+$stmt = mysqli_prepare($conn, $sql);
+mysqli_stmt_bind_param($stmt, "i", $customer_id);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
+$pending_feedbacks = mysqli_fetch_all($result, MYSQLI_ASSOC);
+mysqli_stmt_close($stmt);
 
-    if (!empty($admin_data_about['profile_photo_path'])) {
-        $admin_profile_photo = "uploads/" . htmlspecialchars($admin_data_about['profile_photo_path']);
-    }
-    if (!empty($admin_data_about['license_image_path'])) {
-        $admin_license_image = "uploads/" . htmlspecialchars($admin_data_about['license_image_path']);
-    }
-}
+// Fetch all feedbacks (completed or pending)
+$feedbacks_query = mysqli_prepare($conn, "
+    SELECT f.*, c.make, c.model, c.year 
+    FROM feedbacks f
+    JOIN cars c ON f.car_id = c.id
+    WHERE f.customer_id = ?
+");
+mysqli_stmt_bind_param($feedbacks_query, "i", $customer_id);
+mysqli_stmt_execute($feedbacks_query);
+$feedbacks_result = mysqli_stmt_get_result($feedbacks_query);
 
-// --- PHP for fetching Feedback data for Feedback Tab ---
-$feedbacks_data = [];
-$sql_feedbacks = "SELECT f.id, f.name, f.rating, f.comments, c.make, c.model, c.year
-                  FROM feedbacks f
-                  LEFT JOIN cars c ON f.car_id = c.id
-                  ORDER BY f.created_at DESC";
-$result_feedbacks = mysqli_query($conn, $sql_feedbacks);
-if ($result_feedbacks) {
-    while ($row = mysqli_fetch_assoc($result_feedbacks)) {
-        $feedbacks_data[] = $row;
-    }
-} else {
-    set_message('Error fetching feedback data: ' . mysqli_error($conn), 'error');
-    error_log('[KRM ERROR] Error fetching feedback data: ' . mysqli_error($conn));
-}
+// Fetch customer name and phone number
+$customer_info = [];
+$customer_query = mysqli_prepare($conn, "SELECT name, phone_number FROM customers WHERE id = ?");
+mysqli_stmt_bind_param($customer_query, "i", $customer_id);
+mysqli_stmt_execute($customer_query);
+$customer_result = mysqli_stmt_get_result($customer_query);
+$customer_info = mysqli_fetch_assoc($customer_result);
+mysqli_stmt_close($customer_query);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -361,6 +355,7 @@ if ($result_feedbacks) {
     <nav class="nav-tabs" id="navBar">
         <button class="nav-tab active" onclick="showTab('home')">HOME</button>
         <button class="nav-tab" onclick="showTab('rentals')">AVAILABLE RENTALS</button>
+        <button class="nav-tab" onclick="showTab('myrentals')">MY RENTALS</button>
         <button class="nav-tab" onclick="showTab('feedback')">FEEDBACK &amp; RATING</button>
         <button class="nav-tab" onclick="showTab('profile')">PROFILE</button>
     </nav>
@@ -374,7 +369,7 @@ if ($result_feedbacks) {
         </div>
 
         <!-- Home Tab -->
-        <div id="home-tab" class="tab-content active"> <!-- Set home tab active by default -->
+        <div id="home" class="tab-content active"> <!-- Set home tab active by default -->
             <section class="face" id="welcome">
                 <section class="welcome-card">
                     <h1>KRM SERVICE</h1>
@@ -409,10 +404,41 @@ if ($result_feedbacks) {
                     </div>
                 </div>
             </div>
+
+            <?php if (!empty($pending_feedbacks)): ?>
+                <div class="alert alert-warning mt-4">
+                    <h5 class="alert-heading">We'd love your feedback!</h5>
+                    <p>Please take a moment to review your recent rental experience. This helps us improve our service.</p>
+                    <div class="row g-3">
+                        <?php foreach ($pending_feedbacks as $fb): ?>
+                            <div class="col-md-6 col-lg-4">
+                                <div class="card border-warning shadow-sm">
+                                    <div class="card-body">
+                                        <h5 class="card-title"><?= htmlspecialchars($fb['make'] . ' ' . $fb['model'] . ' ' . $fb['year']) ?></h5>
+                                        <p class="card-text">
+                                            Reservation ID: <strong>#<?= $fb['reservation_id'] ?></strong><br>
+                                            Feedback ID: <strong>#<?= $fb['feedback_id'] ?></strong>
+                                        </p>
+                                        <button class="btn btn-sm btn-warning"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#feedbackModal"
+                                            data-feedback-id="<?= $row['id'] ?>"
+                                            data-name="<?= htmlspecialchars($customer_info['name']) ?>"
+                                            data-phone="<?= htmlspecialchars($customer_info['phone_number']) ?>">
+                                            Leave Feedback ⭐
+                                        </button>
+
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
         </div>
 
         <!-- Rentals Tab -->
-        <div id="rentals-tab" class="tab-content hidden">
+        <div id="rentals" class="tab-content hidden">
             <div class="card-grid">
                 <?php if (empty($cars_data)): ?>
                     <p>No cars available for rent at the moment.</p>
@@ -617,37 +643,48 @@ if ($result_feedbacks) {
             </div>
         </div>
 
-        <!-- Feedback Tab -->
-        <div id="feedback-tab" class="tab-content hidden">
+        <!-- My Rentals Tab -->
+        <div id="myrentals" class="tab-content hidden">
             <div class="modal-header">
-                <div class="modal-title">Customer Feedbacks</div>
-                <button class="btn feedback" onclick="addFeedback()">Add feedback</button>
+                <h4 class="modal-title">My Rentals</h4>
             </div>
 
-            <table class="table">
-                <thead>
+            <table class="table table-bordered table-hover">
+                <thead class="table-light">
                     <tr>
                         <th>No.</th>
-                        <th>Name</th>
-                        <th>Rented car</th>
-                        <th>Rating (5/5)</th>
-                        <th>Comments</th>
+                        <th>Reservation ID</th>
+                        <th>Rented Car</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (empty($feedbacks_data)): ?>
+                    <?php if (empty($reservations)): ?>
                         <tr>
-                            <td colspan="5">No feedback available yet.</td>
+                            <td colspan="6" class="text-center">No reservations found.</td>
                         </tr>
                     <?php else: ?>
                         <?php $count = 1; ?>
-                        <?php foreach ($feedbacks_data as $feedback): ?>
+                        <?php foreach ($reservations as $r): ?>
                             <tr>
-                                <td><?php echo $count++; ?></td>
-                                <td><?php echo htmlspecialchars($feedback['name']); ?></td>
-                                <td><?php echo htmlspecialchars($feedback['make'] . ' ' . $feedback['model'] . ' ' . $feedback['year']); ?></td>
-                                <td><?php echo htmlspecialchars($feedback['rating']); ?></td>
-                                <td><?php echo htmlspecialchars($feedback['comments']); ?></td>
+                                <td><?= $count++ ?></td>
+                                <td>#<?= $r['id'] ?></td>
+                                <td><?= htmlspecialchars("{$r['make']} {$r['model']} {$r['year']}") ?></td>
+                                <td><?= date('M d, Y', strtotime($r['pickup_date'])) ?> - <?= date('M d, Y', strtotime($r['return_date'])) ?></td>
+                                <td><span class="badge bg-<?= $r['status'] === 'completed' ? 'success' : ($r['status'] === 'cancelled' ? 'danger' : 'warning') ?>">
+                                        <?= ucfirst($r['status']) ?></span>
+                                </td>
+                                <td>
+                                    <button type="button"
+                                        class="btn btn-sm btn-outline-info"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#viewReservationModal"
+                                        data-reservation='<?= json_encode($r, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>'>
+                                        View
+                                    </button>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -655,78 +692,188 @@ if ($result_feedbacks) {
             </table>
         </div>
 
-        <!-- Fedback Modal -->
-        <div id="feedback-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 class="modal-title">Feedback &amp; Review</h3>
-                    <button class="close-btn" onclick="closeModal()">&times;</button>
+        <!-- View Reservation Modal -->
+        <div class="modal fade" id="viewReservationModal" tabindex="-1" aria-labelledby="viewReservationModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Reservation Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p><strong>Customer Name:</strong> <span id="modalCustomerName"></span></p>
+                        <p><strong>Phone Number:</strong> <span id="modalCustomerPhone"></span></p>
+                        <p><strong>Car:</strong> <span id="modalCar"></span></p>
+                        <p><strong>Status:</strong> <span id="modalStatus"></span></p>
+                        <p><strong>Pickup Date:</strong> <span id="modalPickupDate"></span></p>
+                        <p><strong>Return Date:</strong> <span id="modalReturnDate"></span></p>
+                        <p><strong>Passengers:</strong> <span id="modalPassengers"></span></p>
+                        <p><strong>Pickup Location:</strong> <span id="modalPickupLocation"></span></p>
+                        <p><strong>Accommodations:</strong> <span id="modalAccommodations"></span></p>
+                        <p><strong>Special Requests:</strong> <span id="modalSpecialRequests"></span></p>
+                        <p><strong>Estimated Price:</strong> ₱<span id="modalEstimatedPrice"></span></p>
+                    </div>
                 </div>
+            </div>
+        </div>
 
-                <form action="" method="POST" id="feedbackForm">
-                    <input type="hidden" name="form_type" value="feedback">
-                    <div class="form-group">
-                        <label for="name" class="form-label">Name</label>
-                        <input
-                            type="text"
-                            id="feedbackName"
-                            name="name"
-                            placeholder="e.g. Juan dela Cruz"
-                            required
-                            class="form-input" />
+        <!-- Feedback Tab -->
+        <div id="feedback" class="tab-content hidden">
+            <?php if (isset($_SESSION['feedback_deleted'])): ?>
+                <div class="alert alert-success">
+                    <?= $_SESSION['feedback_deleted'];
+                    unset($_SESSION['feedback_deleted']); ?>
+                </div>
+            <?php elseif (isset($_SESSION['feedback_error'])): ?>
+                <div class="alert alert-danger">
+                    <?= $_SESSION['feedback_error'];
+                    unset($_SESSION['feedback_error']); ?>
+                </div>
+            <?php endif; ?>
+
+            <div class="modal-header">
+                <h4 class="modal-title">Your Feedbacks</h4>
+            </div>
+
+            <table class="table table-bordered table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>No.</th>
+                        <th>Reservation ID</th>
+                        <th>Rented Car</th>
+                        <th>Rating</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (mysqli_num_rows($feedbacks_result) === 0): ?>
+                        <tr>
+                            <td colspan="4">No feedback available yet.</td>
+                        </tr>
+                    <?php else: ?>
+                        <?php $count = 1; ?>
+                        <?php while ($row = mysqli_fetch_assoc($feedbacks_result)): ?>
+                            <tr>
+                                <td><?= $count++ ?></td>
+                                <td><?= htmlspecialchars("{$row['reservation_id']}") ?></td>
+                                <td><?= htmlspecialchars("{$row['make']} {$row['model']} {$row['year']}") ?></td>
+                                <td>
+                                    <?= $row['status'] === 'completed'
+                                        ? htmlspecialchars($row['rating']) . '/5'
+                                        : '<em>Pending</em>' ?>
+                                </td>
+                                <td>
+                                    <?php if ($row['status'] === 'completed'): ?>
+                                        <button type="button" class="btn btn-sm btn-outline-info"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#viewFeedbackModal"
+                                            data-feedback='<?= json_encode($row, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>'>
+                                            Show
+                                        </button>
+                                        <form action="delete_feedback.php" method="POST" style="display:inline;">
+                                            <input type="hidden" name="id" value="<?= $row['id'] ?>">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                        </form>
+                                    <?php else: ?>
+                                        <button class="btn btn-sm btn-warning"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#feedbackModal"
+                                            data-feedback-id="<?= $row['id'] ?>"
+                                            data-name="<?= htmlspecialchars($customer_info['name']) ?>"
+                                            data-phone="<?= htmlspecialchars($customer_info['phone_number']) ?>">
+                                            Leave Feedback ⭐
+                                        </button>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endwhile; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- View Feedback Modal -->
+        <div class="modal fade" id="viewFeedbackModal" tabindex="-1" aria-labelledby="viewFeedbackModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Feedback Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="form-group">
-                        <label for="phoneNum" class="form-label">Phone number</label>
-                        <input
-                            type="tel"
-                            id="feedbackPhoneNum"
-                            name="phoneNum"
-                            placeholder="e.g. 09123456789"
-                            minlength="11" maxlength="11"
-                            class="form-input" />
+                    <div class="modal-body">
+                        <p><strong>Name:</strong> <span id="viewName"></span></p>
+                        <p><strong>Phone Number:</strong> <span id="viewPhone"></span></p>
+                        <p><strong>Car:</strong> <span id="viewCar"></span></p>
+                        <p><strong>Rating:</strong> <span id="viewRating"></span> / 5</p>
+                        <p><strong>Comments:</strong></p>
+                        <p id="viewComments" class="border p-2 bg-light rounded"></p>
                     </div>
-                    <div class="form-group">
-                        <label for="rentedCar" class="form-label">Rented car</label>
-                        <select id="rentedCar" name="rentedCar" class="form-input" required>
-                            <option value="" disabled selected>Select rented car</option>
-                            <?php foreach ($cars_data as $car): ?>
-                                <option value="<?php echo $car['id']; ?>"><?php echo htmlspecialchars($car['make'] . ' ' . $car['model'] . ' ' . $car['year']); ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     </div>
-                    <div class="form-group">
-                        <label for="rating" class="form-label">Rating</label>
-                        <select id="rating" name="rating" class="form-input" required>
-                            <option value="" disabled selected>Select rating</option>
-                            <option value="5">5 - Excellent</option>
-                            <option value="4">4 - Very Good</option>
-                            <option value="3">3 - Good</option>
-                            <option value="2">2 - Fair</option>
-                            <option value="1">1 - Poor</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="comments" class="form-label">Comments</label>
-                        <textarea
-                            id="comments"
-                            name="feedback"
-                            placeholder="Write your feedback or review here..."
-                            class="form-input" required>
-                        </textarea>
-                    </div>
-                    <button type="submit" class="submit-btn">Submit Feedback</button>
-                </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feedback Modal -->
+        <div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <form action="submit_feedback.php" method="POST">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="feedbackModalLabel">Leave Your Feedback</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <input type="hidden" name="feedback_id" id="feedbackId">
+
+                            <div class="mb-3">
+                                <label for="feedbackName" class="form-label">Your Name</label>
+                                <input type="text" name="name" id="feedbackName" class="form-control" required
+                                    value="<?= htmlspecialchars($customer_info['name'] ?? '') ?>">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="feedbackPhoneNum" class="form-label">Phone Number</label>
+                                <input type="tel" name="phoneNum" id="feedbackPhoneNum" class="form-control"
+                                    minlength="11" maxlength="11" required
+                                    value="<?= htmlspecialchars($customer_info['phone_number'] ?? '') ?>">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="rating" class="form-label">Rating</label>
+                                <select name="rating" id="rating" class="form-select" required>
+                                    <option value="" disabled selected>Select rating</option>
+                                    <option value="5">5 - Excellent</option>
+                                    <option value="4">4 - Very Good</option>
+                                    <option value="3">3 - Good</option>
+                                    <option value="2">2 - Fair</option>
+                                    <option value="1">1 - Poor</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="comments" class="form-label">Comments</label>
+                                <textarea name="feedback" id="comments" class="form-control" rows="4" required></textarea>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Submit Feedback</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
 
         <?php
-        $userId = $_SESSION["customer_id"];
 
         $sql_customer_data = "SELECT * FROM customers WHERE id = ?";
         $stmt_customer_data = mysqli_prepare($conn, $sql_customer_data);
 
         if ($stmt_customer_data) {
-            mysqli_stmt_bind_param($stmt_customer_data, "i", $userId);
+            mysqli_stmt_bind_param($stmt_customer_data, "i", $customer_id);
             mysqli_stmt_execute($stmt_customer_data);
             $result_fetch_customer = mysqli_stmt_get_result($stmt_customer_data);
 
@@ -751,7 +898,7 @@ if ($result_feedbacks) {
         }
         ?>
 
-        <div id="profile-tab" class="tab-content hidden">
+        <div id="profile" class="tab-content hidden">
             <section class="vh-100 gradient-custom">
                 <div class="container py-5 h-100">
                     <div class="row justify-content-center align-items-center h-100">
@@ -864,26 +1011,33 @@ if ($result_feedbacks) {
     <script>
         // Tab switching functionality
         function showTab(tabName) {
-            // Hide all tabs
-            const tabs = document.querySelectorAll(".tab-content");
-            tabs.forEach((tab) => tab.classList.add("hidden"));
+            // Hide all tab contents
+            document.querySelectorAll(".tab-content").forEach(tab => {
+                tab.classList.add("hidden");
+            });
 
-            // Remove active class from all nav tabs
-            const navTabs = document.querySelectorAll(".nav-tab");
-            navTabs.forEach((tab) => tab.classList.remove("active"));
+            // Remove 'active' class from all nav tabs
+            document.querySelectorAll(".nav-tab").forEach(tab => {
+                tab.classList.remove("active");
+            });
 
-            // Show selected tab
-            document.getElementById(tabName + "-tab").classList.remove("hidden");
+            // Show the selected tab
+            const targetTab = document.getElementById(tabName);
+            if (targetTab) {
+                targetTab.classList.remove("hidden");
+            }
 
-            // Add active class to selected nav tab using event.target or find by tabName
-            const clickedButton = Array.from(navTabs).find(button => button.getAttribute('onclick') === `showTab('${tabName}')`);
+            // Add 'active' class to the clicked nav button
+            const clickedButton = Array.from(document.querySelectorAll(".nav-tab"))
+                .find(button => button.getAttribute("onclick") === `showTab('${tabName}')`);
             if (clickedButton) {
                 clickedButton.classList.add("active");
             }
 
-            // Save the active tab to localStorage
-            localStorage.setItem('customer_last_active_tab', tabName);
+            // Save the active tab name in localStorage
+            localStorage.setItem("customer_last_active_tab", tabName);
         }
+
 
         function showMessageBox(message, type) {
             const messageBox = document.getElementById('messageBox');
@@ -896,7 +1050,6 @@ if ($result_feedbacks) {
                 messageBox.style.display = 'none';
             }, 5000);
         }
-
 
         // Check if there's a PHP message to display on page load
         <?php if (!empty($display_message)): ?>
@@ -964,6 +1117,27 @@ if ($result_feedbacks) {
             }
         }
 
+        // Populate reservation modal
+        document.addEventListener('DOMContentLoaded', function() {
+            const viewModal = document.getElementById('viewReservationModal');
+            viewModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const data = JSON.parse(button.getAttribute('data-reservation'));
+
+                document.getElementById('modalCustomerName').textContent = data.customer_name || '';
+                document.getElementById('modalCustomerPhone').textContent = data.phone_number || '';
+                document.getElementById('modalCar').textContent = `${data.make} ${data.model} ${data.year}`;
+                document.getElementById('modalStatus').textContent = data.status;
+                document.getElementById('modalPickupDate').textContent = data.pickup_date;
+                document.getElementById('modalReturnDate').textContent = data.return_date;
+                document.getElementById('modalPassengers').textContent = data.passenger_count;
+                document.getElementById('modalPickupLocation').textContent = data.pickup_location;
+                document.getElementById('modalAccommodations').textContent = data.accommodations;
+                document.getElementById('modalSpecialRequests').textContent = data.special_requests;
+                document.getElementById('modalEstimatedPrice').textContent = parseFloat(data.estimated_price).toFixed(2);
+            });
+        });
+
         function reserveNow() {
             document.getElementById("reserve-modal").classList.add("active");
         }
@@ -982,37 +1156,49 @@ if ($result_feedbacks) {
             window.location.href = "?logout=true";
         }
 
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const feedbackModal = document.getElementById("feedback-modal");
-            const carModal = document.getElementById("car-modal");
+        document.addEventListener('DOMContentLoaded', () => {
+            const feedbackModal = document.getElementById('feedbackModal');
+            feedbackModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                document.getElementById('feedbackId').value = button.getAttribute('data-feedback-id') || '';
+                document.getElementById('feedbackName').value = button.getAttribute('data-name') || '';
+                document.getElementById('feedbackPhoneNum').value = button.getAttribute('data-phone') || '';
+            });
 
-            if (feedbackModal && event.target === feedbackModal) {
-                closeModal();
-            }
-            if (carModal && event.target === carModal) {
-                closeModal();
-            }
-        }
+            const viewModal = document.getElementById('viewFeedbackModal');
+            viewModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const feedback = JSON.parse(button.getAttribute('data-feedback'));
+
+                document.getElementById('viewName').textContent = feedback.name || '';
+                document.getElementById('viewPhone').textContent = feedback.phone_number || '';
+                document.getElementById('viewCar').textContent = `${feedback.make} ${feedback.model} ${feedback.year}`;
+                document.getElementById('viewRating').textContent = feedback.rating || '';
+                document.getElementById('viewComments').textContent = feedback.comments || '';
+            });
+        });
 
         // Initial active tab setting on page load
         document.addEventListener('DOMContentLoaded', function() {
-            const urlHash = window.location.hash.substring(1); // Get hash without '#'
+            const urlHash = window.location.hash.substring(1); // Get the hash without the '#'
             const lastActiveTab = localStorage.getItem('customer_last_active_tab');
 
-            // Check if the URL has a hash, specifically for a "fresh" load to the home tab (e.g., from admin logout)
-            if (urlHash === 'home-tab') {
+            // Case 1: If URL hash is explicitly '#home', prioritize it
+            if (urlHash === 'home') {
                 showTab('home');
-                // Clear the hash from the URL so subsequent refreshes respect localStorage
+                // Remove the hash from the URL so future reloads use localStorage
                 window.history.replaceState({}, document.title, window.location.pathname);
-            } else if (lastActiveTab) {
-                // If no specific hash for home, but a tab is stored, use it (for regular refreshes)
+            }
+            // Case 2: Use last stored tab from localStorage (on refresh)
+            else if (lastActiveTab && document.getElementById(lastActiveTab)) {
                 showTab(lastActiveTab);
-            } else {
-                // If neither, default to 'home' (first time access or localStorage cleared)
+            }
+            // Case 3: Fallback to 'home'
+            else {
                 showTab('home');
             }
         });
+
 
         // Event listener for estimated price calculation
         document.addEventListener('DOMContentLoaded', function() {

@@ -23,14 +23,36 @@ if (isset($_GET['id']) && is_numeric($_GET['id']) && isset($_GET['status'])) {
     mysqli_begin_transaction($conn);
 
     try {
-        // Update reservation status
+        // 1. Update reservation status
         $update_res_sql = "UPDATE reservations SET status = ? WHERE id = ?";
         $stmt_res = mysqli_prepare($conn, $update_res_sql);
         mysqli_stmt_bind_param($stmt_res, "si", $new_status, $reservation_id);
         mysqli_stmt_execute($stmt_res);
         mysqli_stmt_close($stmt_res);
 
-        // Get car_id related to this reservation
+        // 2. If status is 'completed', insert feedback request
+        if ($new_status === 'completed') {
+            $get_customer_sql = "SELECT customer_id, car_id FROM reservations WHERE id = ?";
+            $stmt_get_cust = mysqli_prepare($conn, $get_customer_sql);
+            mysqli_stmt_bind_param($stmt_get_cust, "i", $reservation_id);
+            mysqli_stmt_execute($stmt_get_cust);
+            $result = mysqli_stmt_get_result($stmt_get_cust);
+            $row = mysqli_fetch_assoc($result);
+            mysqli_stmt_close($stmt_get_cust);
+
+            $customer_id = $row['customer_id'] ?? 0;
+            $car_id = $row['car_id'] ?? 0;
+
+            if ($customer_id && $car_id) {
+                $insert_feedback_sql = "INSERT INTO feedbacks (reservation_id, customer_id, car_id, status) VALUES (?, ?, ?, 'pending')";
+                $stmt_feedback = mysqli_prepare($conn, $insert_feedback_sql);
+                mysqli_stmt_bind_param($stmt_feedback, "iii", $reservation_id, $customer_id, $car_id);
+                mysqli_stmt_execute($stmt_feedback);
+                mysqli_stmt_close($stmt_feedback);
+            }
+        }
+
+        // 3. Get car_id related to this reservation (again for safety)
         $car_query = "SELECT car_id FROM reservations WHERE id = ?";
         $stmt_car = mysqli_prepare($conn, $car_query);
         mysqli_stmt_bind_param($stmt_car, "i", $reservation_id);
@@ -39,7 +61,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id']) && isset($_GET['status'])) {
         mysqli_stmt_fetch($stmt_car);
         mysqli_stmt_close($stmt_car);
 
-        // Apply status rules to the car
+        // 4. Apply status rules to the car
         if ($car_id) {
             $new_car_status = null;
 
@@ -58,6 +80,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id']) && isset($_GET['status'])) {
             }
         }
 
+        // 5. Commit transaction
         mysqli_commit($conn);
         echo "<script>alert('Reservation status updated to " . strtoupper($new_status) . ".');</script>";
     } catch (Exception $e) {
