@@ -1,0 +1,198 @@
+ * {
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: white;
+        color: #333;
+        padding: 20px;
+    }
+
+    .form-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 400px;
+        margin: 15px 0;
+        padding: 15px;
+    }
+
+    .form-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        width: 100%;
+        max-width: 600px;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+
+    .form-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .form-title {
+        font-size: 24px;
+        font-weight: bold;
+        margin: 0 0 10px 0;
+        color: #333;
+    }
+
+    .form-subtitle {
+        font-size: 14px;
+        color: #666;
+        margin: 0;
+        line-height: 1.4;
+    }
+
+    .form-form {
+        width: 100%;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 14px;
+        font-weight: 500;
+        color: #333;
+        margin-bottom: 8px;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+        color: #333;
+        background: white;
+        transition: all 0.3s ease;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: #333;
+        box-shadow: 0 0 0 2px rgba(51, 51, 51, 0.1);
+    }
+
+    .form-input::placeholder {
+        color: #999;
+    }
+
+    /* Form Options (Remember Me & Forgot Password) */
+    .form-options {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+        font-size: 12px;
+    }
+
+    .checkbox {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .checkbox input[type="checkbox"] {
+        width: 14px;
+        height: 14px;
+        cursor: pointer;
+    }
+
+    .checkbox label {
+        color: #666;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    /* Submit Button */
+    .submit-btn {
+        width: 100%;
+        background: #333;
+        color: white;
+        border: none;
+        padding: 15px;
+        border-radius: 5px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .submit-btn:hover {
+        background: #555;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .submit-btn:active {
+        background: #222;
+        transform: translateY(0);
+    }
+
+    .error{
+        font-weight: 13px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: red;
+    }
+
+    .return-section {
+        text-align: center;
+        margin-top: 25px;
+        padding-top: 25px;
+        border-top: 1px solid #eee;
+    }
+
+    .return-text {
+        font-size: 14px;
+        color: #666;
+        margin: 0;
+    }
+
+    .return-link {
+        color: #3498db;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.3s ease;
+    }
+
+    .return-link:hover {
+        color: #2980b9;
+        text-decoration: underline;
+    }
+
+    @media (max-width: 768px) {
+        .header {
+            padding: 15px;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .nav {
+            gap: 20px;
+        }
+        
+        .logo {
+            font-size: 16px;
+        }
+        
+        .login-card {
+            padding: 30px 20px;
+            margin: 10px;
+        }
+        
+        .login-container {
+            margin: 10px 0;
+            padding: 10px;
+        }
+    }

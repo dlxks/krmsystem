@@ -1,0 +1,114 @@
+some notes::
+--1st page: customer dashboard, admin panel btn will provide a login page for ADMIN
+--customer can return to customer panel if admin panel is accidentally clicked; "Return to session" btn
+--after login, admin panel is accessible
+--admin can log out of the session
+  --LOG OUT should contain a question prompt and a kill session
+--customer lacks booking form, should be included
+
+username: admin
+password: krmAdmin123
+
+
+#db tables
+CREATE TABLE reservation (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    fullName VARCHAR(100),
+    address VARCHAR(100),
+    messengerName VARCHAR(100),
+    phoneNum VARCHAR(100),
+    pickup_date DATE,
+    return_date DATE,
+    pickup_location VARCHAR(100),
+    passengerCount VARCHAR(100),
+    accomodations VARCHAR(100),
+    special_requests TEXT,
+    status ENUM('reserved', 'completed', 'cancelled') DEFAULT 'reserved',
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE vehicles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    make VARCHAR(100),
+    model VARCHAR(100)
+    year DATE,
+    color VARCHAR(100),
+    engine VARCHAR(50),
+    transmission VARCHAR(50),
+    fuelEconomy VARCHAR(100),
+    seatingCapacity VARCHAR(100),
+    safetyFeatures VARCHAR(100),
+    addtlFeatures VARCHAR(100),
+    special_requests VARCHAR(100),
+    price INT(10).
+    status ENUM('available', 'reserved') DEFAULT 'available',
+    image IMAGE
+);
+
+CREATE TABLE admin (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100),
+  address VARCHAR(100),
+  phoneNum VARCHAR(100),
+  license IMAGE
+);
+
+CREATE TABLE feedback (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100),
+  phoneNum VARCHAR(100),
+  rating INT(10),
+  feedback VARCHAR(100)
+  --will reference table RESERVATION
+)
+-----------------------
+#booking.php
+<?php
+include 'db.php';
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $full_name = $_POST['full_name'];
+    $pickup_date = $_POST['pickup_date'];
+    $return_date = $_POST['return_date'];
+    $pickup_location = $_POST['pickup_location'];
+    $car_type = $_POST['car_type'];
+    $special_requests = $_POST['special_requests'];
+
+    // Insert reservation into the database
+    $stmt = $pdo->prepare("INSERT INTO reservations (user_id, pickup_date, return_date, pickup_location, car_type, special_requests) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmt->execute([1, $pickup_date, $return_date, $pickup_location, $car_type, $special_requests]); // Assuming user_id is 1 for demo
+
+    header("Location: index.html"); // Redirect back to the home page
+    exit();
+}
+?>
+-----------------------
+#db.php
+<?php
+$host = 'localhost';
+$db = 'krm_rent_a_car';
+$user = 'root'; // your database username
+$pass = ''; // your database password
+
+try {
+    $pdo = new PDO("mysql:host=$host;dbname=$db", $user, $pass);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    echo "Connection failed: " . $e->getMessage();
+}
+?>
+-----------------------
+#script.js
+function showPage(pageId) {
+  const pages = document.querySelectorAll(".page");
+  pages.forEach((page) => {
+    page.classList.remove("active");
+  });
+  document.getElementById(pageId).classList.add("active");
+}
+
+function toggleAdmin() {
+  const adminPanel = document.getElementById("admin");
+  adminPanel.classList.toggle("active");
+}
+-----------------------
