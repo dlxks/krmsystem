@@ -337,7 +337,7 @@ $sql_customers = "
         LEFT JOIN reservations r ON c.id = r.customer_id
         LEFT JOIN cars ca ON r.car_id = ca.id
         GROUP BY c.id
-        ORDER BY rental_dates_summary DESC;
+        ORDER BY c.id DESC;
     ";
 $result_customers = mysqli_query($conn, $sql_customers);
 
