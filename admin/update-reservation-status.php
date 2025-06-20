@@ -1,7 +1,6 @@
 <?php
 session_start();
 include '../conn.php';
-include '../check_customer_session.php';
 
 // Check if admin is logged in
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {

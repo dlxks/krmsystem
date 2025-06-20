@@ -1,7 +1,6 @@
 <?php
 session_start();
 include("../conn.php");
-include '../check_customer_session.php';
 
 $error = ""; // Initialize error message
 

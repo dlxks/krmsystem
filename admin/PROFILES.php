@@ -2,7 +2,6 @@
 session_start();
 
 include '../conn.php';
-include '../check_customer_session.php';
 
 // Initialize a message variable for customer responses
 $display_customer_message = '';

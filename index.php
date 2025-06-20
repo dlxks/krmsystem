@@ -229,7 +229,7 @@ if ($result_cars) {
                 <div class="d-flex justify-content-center">
                     <!-- Sample profile info -->
                     <div>
-                        <img src="assets/admin.jpg" alt="Admin" class="rounded-circle mb-3" width="100">
+                        <img src="uploads/685145458aec0_zz.jpg" alt="Admin" class="rounded-circle mb-3" width="100">
                         <h5>Juan Dela Cruz</h5>
                         <p>Email: krm@example.com<br>Phone: 0912-345-6789<br>Location: Cavite, PH</p>
                     </div>
