@@ -422,12 +422,11 @@ mysqli_stmt_close($customer_query);
                                         <button class="btn btn-sm btn-warning"
                                             data-bs-toggle="modal"
                                             data-bs-target="#feedbackModal"
-                                            data-feedback-id="<?= $row['id'] ?>"
+                                            data-feedback-id="<?= $fb['feedback_id'] ?>"
                                             data-name="<?= htmlspecialchars($customer_info['name']) ?>"
                                             data-phone="<?= htmlspecialchars($customer_info['phone_number']) ?>">
                                             Leave Feedback ⭐
                                         </button>
-
                                     </div>
                                 </div>
                             </div>
@@ -435,211 +434,209 @@ mysqli_stmt_close($customer_query);
                     </div>
                 </div>
             <?php endif; ?>
+
         </div>
 
         <!-- Rentals Tab -->
         <div id="rentals" class="tab-content hidden">
-            <div class="card-grid">
-                <?php if (empty($cars_data)): ?>
-                    <p>No cars available for rent at the moment.</p>
-                <?php else: ?>
-                    <?php foreach ($cars_data as $car): ?>
-                        <button class="card" onclick="showCarDetails(<?php echo $car['id']; ?>)" <?php echo ($car['status'] !== 'available') ? 'disabled' : ''; ?>>
-                            <img class="car-image" src="../uploads/<?php echo htmlspecialchars($car['image_path']); ?>" alt="<?php echo $car['make'] . ' ' . $car['model']; ?>">
+            <div class="container">
+                <div class="row g-4">
+                    <?php if (empty($cars_data)): ?>
+                        <div class="col-12">
+                            <p class="text-muted">No cars available for rent at the moment.</p>
+                        </div>
+                    <?php else: ?>
+                        <?php foreach ($cars_data as $car): ?>
+                            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                <button
+                                    type="button"
+                                    class="card h-100 border-0 p-0 bg-transparent position-relative"
+                                    onclick="showCarDetails(<?= $car['id']; ?>)"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#carModal"
+                                    <?= $car['status'] !== 'available' ? 'disabled' : '' ?>>
+                                    <img class="card-img-top car-image" src="../uploads/<?= htmlspecialchars($car['image_path']) ?>" alt="<?= htmlspecialchars($car['make'] . ' ' . $car['model']) ?>">
 
-                            <!-- Unavailable overlay -->
-                            <?php if ($car['status'] !== 'available'): ?>
-                                <div class="unavailable-overlay">Unavailable</div>
-                            <?php endif; ?>
+                                    <?php if ($car['status'] !== 'available'): ?>
+                                        <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-50 text-white fw-bold fs-5 rounded">
+                                            Unavailable
+                                        </div>
+                                    <?php endif; ?>
 
-                            <div class="car-info">
-                                <?php echo htmlspecialchars($car['make']); ?><br>
-                                <?php echo htmlspecialchars($car['model']) . ' ' . htmlspecialchars($car['year']); ?>
+                                    <div class="card-body text-center">
+                                        <h6 class="card-title mb-0"><?= htmlspecialchars($car['make']) ?></h6>
+                                        <small class="text-muted"><?= htmlspecialchars($car['model']) . ' ' . htmlspecialchars($car['year']) ?></small>
+                                    </div>
+                                </button>
                             </div>
-                        </button>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
 
-            <button type="button" class="submit-btn" onclick="reserveNow()">RESERVE NOW</button>
-            <div class="form-label">
-                *Prices may vary depending on the agreement between the Renter and the owner
+                <!-- Reserve Button -->
+                <div class="mt-4 text-center">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#reserveModal">
+                        RESERVE NOW
+                    </button>
+                    <div class="form-text mt-2">
+                        *Prices may vary depending on the agreement between the Renter and the owner.
+                    </div>
+                </div>
             </div>
         </div>
 
-
         <!-- Car Details Modal -->
-        <div id="car-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <div class="modal-title" id="modalTitle"></div>
-                    <button class="close-btn" onclick="closeModal()">&times;</button>
-                </div>
+        <div class="modal fade" id="carModal" tabindex="-1" aria-labelledby="carModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalTitle">Car Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 
-                <div class="list-group">
-                    <div class="specs">
-                        <h4>Make</h4>
-                        <p id="make"></p>
                     </div>
-                    <div class="specs">
-                        <h4>Model</h4>
-                        <p id="model"></p>
-                    </div>
-                    <div class="specs">
-                        <h4>Year</h4>
-                        <p id="year"></p>
-                    </div>
-                    <div class="specs">
-                        <h4>Color</h4>
-                        <p id="color"></p>
-                    </div>
-                    <div class="specs">
-                        <h4>Engine</h4>
-                        <p id="engine"></p>
-                    </div>
-                    <div class="specs">
-                        <h4>Transmission</h4>
-                        <p id="transmission"></p>
-                    </div>
-                    <div class="specs">
-                        <h4>Fuel Economy</h4>
-                        <p id="fuelEconomy"></p>
-                    </div>
-                    <div class="specs">
-                        <h4>Seating Capacity</h4>
-                        <p id="passengerVolume"></p>
-                    </div>
-                    <div class="specs">
-                        <h4>Safety Features</h4>
-                        <p id="safetyFeatures"></p>
-                    </div>
-                    <div class="specs">
-                        <h4>Additional Features</h4>
-                        <p id="additionalFeatures"></p>
-                    </div>
-                    <div class="specs">
-                        <h4>Base Price</h4>
-                        <p id="basePrice"></p>
+
+                    <div class="modal-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item"><strong>Make:</strong> <span id="make"></span></li>
+                            <li class="list-group-item"><strong>Model:</strong> <span id="model"></span></li>
+                            <li class="list-group-item"><strong>Year:</strong> <span id="year"></span></li>
+                            <li class="list-group-item"><strong>Color:</strong> <span id="color"></span></li>
+                            <li class="list-group-item"><strong>Engine:</strong> <span id="engine"></span></li>
+                            <li class="list-group-item"><strong>Transmission:</strong> <span id="transmission"></span></li>
+                            <li class="list-group-item"><strong>Fuel Economy:</strong> <span id="fuelEconomy"></span></li>
+                            <li class="list-group-item"><strong>Seating Capacity:</strong> <span id="passengerVolume"></span></li>
+                            <li class="list-group-item"><strong>Safety Features:</strong> <span id="safetyFeatures"></span></li>
+                            <li class="list-group-item"><strong>Additional Features:</strong> <span id="additionalFeatures"></span></li>
+                            <li class="list-group-item"><strong>Base Price:</strong> ₱<span id="basePrice"></span></li>
+                        </ul>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Reservation Modal -->
-        <div class="modal" id="reserve-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <div class="modal-title">Reservation Form</div>
-                    <button class="close-btn" onclick="closeModal()">&times;</button>
+        <div class="modal fade" id="reserveModal" tabindex="-1" aria-labelledby="reserveModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
+                <div class="modal-content">
+                    <form action="" method="POST" id="reservationForm">
+                        <input type="hidden" name="form_type" value="reservation">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="reserveModalLabel">Reservation Form</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+
+                        </div>
+
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="fullName" class="form-label">Full Name</label>
+                                <input type="text" id="fullName" name="fullName" class="form-control" placeholder="e.g. Juan dela Cruz" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="licenseNumber" class="form-label">Rental Driver's License Number</label>
+                                <input type="text" id="licenseNumber" name="licenseNumber" class="form-control" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email Address</label>
+                                <input type="email" id="email" name="email" class="form-control" placeholder="e.g. juandelacruz@example.com" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="address" class="form-label">Complete Address</label>
+                                <input type="text" id="address" name="address" class="form-control" placeholder="e.g. 123 Anywhere St., Municipality, Any City, Province" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="messengerName" class="form-label">Messenger Name</label>
+                                <input type="text" id="messengerName" name="messengerName" class="form-control" placeholder="e.g. Juan dela Cruz" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="phoneNumber" class="form-label">Phone Number</label>
+                                <input type="tel" id="phoneNumber" name="phoneNumber" class="form-control" placeholder="e.g. 09123456789" minlength="11" maxlength="11" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="rentalCar" class="form-label">Rental Car</label>
+                                <select id="rentalCar" name="rentalCar" class="form-select" onchange="updatePassengerLimit()">
+                                    <option value="" disabled selected>--Please select--</option>
+                                    <?php
+                                    foreach ($cars_data as $car) {
+                                        $disabled = ($car['status'] !== 'available') ? 'disabled' : '';
+                                        echo "<option value='{$car['id']}' data-seating='{$car['seating_capacity']}' $disabled>";
+                                        echo $car['make'] . " " . $car['model'] . " " . $car['year'] . (($car['status'] !== 'available') ? ' (Unavailable)' : '');
+                                        echo "</option>";
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="pickupDate" class="form-label">Pickup Date</label>
+                                    <input type="date" id="pickupDate" name="pickupDate" class="form-control" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="returnDate" class="form-label">Return Date</label>
+                                    <input type="date" id="returnDate" name="returnDate" class="form-control" required>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="pickupLocation" class="form-label">Pickup Location</label>
+                                <input type="text" id="pickupLocation" name="pickupLocation" class="form-control" placeholder="e.g. Rosario, Cavite" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="passengerCount" class="form-label">Passenger Count</label>
+                                <input type="number" id="passengerCount" name="passengerCount" class="form-control" min="1" placeholder="Enter number of passengers">
+                                <small id="capacityNote" class="form-text text-muted"></small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="accommodations" class="form-label">Accommodations</label>
+                                <input type="text" id="accommodations" name="accommodations" class="form-control" placeholder="Optional (e.g. Novotel Hotel)">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="specialRequests" class="form-label">Special Requests</label>
+                                <input type="text" id="specialRequests" name="specialRequests" class="form-control" placeholder="Optional (e.g. child seat, GPS, etc., or N/A if none)">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="priceDisplay" class="form-label">Estimated Price</label>
+                                <input type="text" id="priceDisplay" class="form-control" readonly>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Renter's Warranty</label>
+                                <div class="border rounded p-3 bg-light" style="font-size: 0.875rem;">
+                                    The Renter agrees that Renter will not:
+                                    <ul class="mt-2 mb-0 ps-4">
+                                        <li>Allow others without a valid license to drive the vehicle</li>
+                                        <li>Use the car for illegal purposes</li>
+                                        <li>Participate in races or competitions</li>
+                                        <li>Operate it negligently</li>
+                                        <li>Remove the GPS tracker (₱5,000 penalty)</li>
+                                        <li>Drive outside declared destinations (₱3,000–₱10,000 penalties)</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="form-check mb-4">
+                                <input class="form-check-input" type="checkbox" id="agree" required>
+                                <label class="form-check-label" for="agree">
+                                    I confirm the above information is correct and I agree to the Renter's Warranty.
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-success">Reserve Now</button>
+                        </div>
+                    </form>
                 </div>
-                <form action="" method="POST" id="reservationForm">
-                    <input type="hidden" name="form_type" value="reservation">
-                    <div class="form-group">
-                        <label class="form-label" for="fullName">Full Name</label>
-                        <input type="text" id="fullName" name="fullName" class="form-input" placeholder="e.g. Juan dela Cruz" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="licenseNumber">Rental Driver's License Number</label>
-                        <input type="text" id="licenseNumber" name="licenseNumber" class="form-input" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="email">Email Address</label>
-                        <input type="email" id="email" name="email" class="form-input" placeholder="e.g. juandelacruz@example.com" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="address">Complete Address</label>
-                        <input type="text" id="address" name="address" class="form-input" placeholder="e.g. 123 Anywhere St., Municipality, Any City, Province" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="messengerName">Messenger Name</label>
-                        <input type="text" id="messengerName" name="messengerName" class="form-input" placeholder="e.g. Juan dela Cruz" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="phoneNumber">Phone Number</label>
-                        <input type="tel" id="phoneNumber" name="phoneNumber" class="form-input" placeholder="e.g. 09123456789" minlength="11" maxlength="11" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="rentalCar" class="form-label">Rental Car</label>
-                        <select id="rentalCar" name="rentalCar" class="form-input" onchange="updatePassengerLimit()">
-                            <option value="" disabled selected>--Please select--</option>
-                            <?php
-                            foreach ($cars_data as $car) {
-                                $disabled = ($car['status'] !== 'available') ? 'disabled' : '';
-                                echo "<option value='{$car['id']}' data-seating='{$car['seating_capacity']}' $disabled>";
-                                echo $car['make'] . " " . $car['model'] . " " . $car['year'] . (($car['status'] !== 'available') ? ' (Unavailable)' : '');
-                                echo "</option>";
-                            }
-                            ?>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <div class="form-row">
-                            <label class="form-label" for="pickupDate">Pickup Date</label>
-                            <input type="date" id="pickupDate" name="pickupDate" class="form-control" required>
-
-                            <label class="form-label" for="returnDate">Return Date</label>
-                            <input type="date" id="returnDate" name="returnDate" class="form-control" required>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="pickupLocation">Pickup Location</label>
-                        <input type="text" id="pickupLocation" name="pickupLocation" class="form-input" placeholder="e.g. Rosario, Cavite" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="passengerCount">Passenger Count</label>
-                        <input type="number" id="passengerCount" name="passengerCount" class="form-control mt-2" min="1" placeholder="Enter number of passengers">
-                        <small id="capacityNote" class="text-muted"></small>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="accommodations">Accommodations</label>
-                        <input type="text" id="accommodations" name="accommodations" class="form-input" placeholder="Optional (e.g. Novotel Hotel)">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="specialRequests">Special Requests</label>
-                        <input type="text" id="specialRequests" name="specialRequests" class="form-input" placeholder="Optional (e.g. child seat, GPS, etc., or N/A if none)">
-                    </div>
-                    <div class="form-group">
-                        <label for="estimatedPriceDisplay">Estimated Price</label>
-                        <input type="text" id="priceDisplay" class="form-control" readonly>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Renter's Warranty</label>
-                        <div class="agreement">
-                            The Renter agrees that Renter will not
-                            <br /><br />
-                            (a) Vehicle is only allowed to be operated by the Renter stated on his agreement;
-                            <br /><br />
-                            (b) Allow any other person with no valid driving license to operate the vehicle;
-                            <br /><br />
-                            (c) Operate the vehicle in violation of any laws or for an illegal purpose and that if the
-                            renter does, Renter is responsible for all associated tickets, fines and fees;
-                            <br /><br />
-                            (d) Used the vehicle to push or tow another vehicle;
-                            <br /><br />
-                            (e) Use the vehicle for any race competition;
-                            <br /><br />
-                            (f) Operate the vehicle in a negligent manner;
-                            <br /><br />
-                            (g) The Renter shall not remove the GPS Tracker, otherwise it will automatically report
-                            as vehicle theft and penalty of Php 5,000 and immediate pullout of vehicle;
-                            <br /><br />
-                            (h) Renter warranty to use the vehicle on the declared destinations listed above,
-                            failure to comply will result to Php 3,000 penalty and Php 10,000 for inter-island trips;
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">
-                            Please make sure the information above are all correct.
-                            <br>
-                            Warning: Once the car is reserved, there is no cancellation.
-                        </label>
-                        <input type="checkbox" required>
-                        <label>Click if you agree to the Renter's Warranty</label>
-                    </div>
-                    <button type="submit" class="submit-btn" onclick="">Reserve Now</button>
-                </form>
             </div>
         </div>
 
@@ -694,7 +691,7 @@ mysqli_stmt_close($customer_query);
 
         <!-- View Reservation Modal -->
         <div class="modal fade" id="viewReservationModal" tabindex="-1" aria-labelledby="viewReservationModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">Reservation Details</h5>
@@ -794,7 +791,7 @@ mysqli_stmt_close($customer_query);
 
         <!-- View Feedback Modal -->
         <div class="modal fade" id="viewFeedbackModal" tabindex="-1" aria-labelledby="viewFeedbackModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
+            <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">Feedback Details</h5>
@@ -817,7 +814,7 @@ mysqli_stmt_close($customer_query);
 
         <!-- Feedback Modal -->
         <div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
                     <form action="submit_feedback.php" method="POST">
                         <div class="modal-header">
@@ -1092,29 +1089,27 @@ mysqli_stmt_close($customer_query);
         });
 
         // Modal functionality for Car Details
+        const carsData = <?= json_encode($cars_data) ?>;
+
         function showCarDetails(carId) {
-            // Fetch car data from PHP (cars_data array) and populate modal
-            const carsData = <?php echo json_encode($cars_data); ?>;
-            const selectedCar = carsData.find(car => car.id == carId);
-
-            if (selectedCar) {
-                document.getElementById("modalTitle").textContent = selectedCar.make + ' ' + selectedCar.model + ' ' + selectedCar.year;
-                document.getElementById("make").textContent = selectedCar.make;
-                document.getElementById("model").textContent = selectedCar.model;
-                document.getElementById("year").textContent = selectedCar.year;
-                document.getElementById("color").textContent = selectedCar.color;
-                document.getElementById("engine").textContent = selectedCar.engine;
-                document.getElementById("transmission").textContent = selectedCar.transmission;
-                document.getElementById("fuelEconomy").textContent = selectedCar.fuel_economy;
-                document.getElementById("passengerVolume").textContent = selectedCar.seating_capacity;
-                document.getElementById("safetyFeatures").textContent = selectedCar.safety_features;
-                document.getElementById("additionalFeatures").textContent = selectedCar.additional_features;
-                document.getElementById("basePrice").textContent = parseFloat(selectedCar.price).toFixed(2);
-
-                document.getElementById("car-modal").classList.add("active");
-            } else {
-                showMessageBox("Car details not found.", "error");
+            const car = carsData.find(c => c.id == carId);
+            if (!car) {
+                alert("Car details not found.");
+                return;
             }
+
+            document.getElementById("modalTitle").textContent = `${car.make} ${car.model} ${car.year}`;
+            document.getElementById("make").textContent = car.make;
+            document.getElementById("model").textContent = car.model;
+            document.getElementById("year").textContent = car.year;
+            document.getElementById("color").textContent = car.color;
+            document.getElementById("engine").textContent = car.engine;
+            document.getElementById("transmission").textContent = car.transmission;
+            document.getElementById("fuelEconomy").textContent = car.fuel_economy;
+            document.getElementById("passengerVolume").textContent = car.seating_capacity;
+            document.getElementById("safetyFeatures").textContent = car.safety_features;
+            document.getElementById("additionalFeatures").textContent = car.additional_features;
+            document.getElementById("basePrice").textContent = parseFloat(car.price).toFixed(2);
         }
 
         // Populate reservation modal
@@ -1137,10 +1132,6 @@ mysqli_stmt_close($customer_query);
                 document.getElementById('modalEstimatedPrice').textContent = parseFloat(data.estimated_price).toFixed(2);
             });
         });
-
-        function reserveNow() {
-            document.getElementById("reserve-modal").classList.add("active");
-        }
 
         function addFeedback() {
             document.getElementById("feedback-modal").classList.add("active");

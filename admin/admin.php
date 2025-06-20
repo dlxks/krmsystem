@@ -859,24 +859,30 @@ if ($result_customers) {
                                 <th>Phone Number</th>
                                 <th>Rental Cars (Summary)</th>
                                 <th>Rental Dates (Summary)</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if (empty($customer_data)): ?>
                                 <tr>
-                                    <td colspan="8">No customer data available.</td>
+                                    <td colspan="9" class="text-center text-muted">No customer data available.</td>
                                 </tr>
                             <?php else: ?>
                                 <?php foreach ($customer_data as $customer): ?>
                                     <tr>
-                                        <td><?php echo $customer['id']; ?></td>
-                                        <td><?php echo $customer['name']; ?></td>
-                                        <td><?php echo $customer['driver_license_number']; ?></td>
-                                        <td><?php echo $customer['address']; ?></td>
-                                        <td><?php echo $customer['messenger_name']; ?></td>
-                                        <td><?php echo $customer['phone_number']; ?></td>
-                                        <td><?php echo $customer['rental_cars']; ?></td>
-                                        <td><?php echo $customer['rental_dates']; ?></td>
+                                        <td><?= htmlspecialchars($customer['id']); ?></td>
+                                        <td><?= htmlspecialchars($customer['name']); ?></td>
+                                        <td><?= htmlspecialchars($customer['driver_license_number']); ?></td>
+                                        <td><?= htmlspecialchars($customer['address']); ?></td>
+                                        <td><?= htmlspecialchars($customer['messenger_name']); ?></td>
+                                        <td><?= htmlspecialchars($customer['phone_number']); ?></td>
+                                        <td><?= htmlspecialchars($customer['rental_cars']); ?></td>
+                                        <td><?= htmlspecialchars($customer['rental_dates']); ?></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#viewModal<?= $customer['id']; ?>">
+                                                Rentals
+                                            </button>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>
@@ -885,6 +891,83 @@ if ($result_customers) {
                 </div>
             </div>
         </div>
+        <?php foreach ($customer_data as $customer): ?>
+            <div class="modal fade" id="viewModal<?= $customer['id']; ?>" tabindex="-1" aria-labelledby="viewModalLabel<?= $customer['id']; ?>" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="viewModalLabel<?= $customer['id']; ?>">
+                                Rentals of <?= htmlspecialchars($customer['name']); ?>
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <?php
+                            $reservations = [];
+                            $customer_id = $customer['id'];
+                            $sql = "
+              SELECT r.id, r.pickup_date, r.return_date, r.status,
+                     CONCAT(c.make, ' ', c.model, ' ', c.year) AS car_model
+              FROM reservations r
+              JOIN cars c ON r.car_id = c.id
+              WHERE r.customer_id = ?
+              ORDER BY r.created_at DESC
+            ";
+                            $stmt = mysqli_prepare($conn, $sql);
+                            if ($stmt) {
+                                mysqli_stmt_bind_param($stmt, "i", $customer_id);
+                                mysqli_stmt_execute($stmt);
+                                $result = mysqli_stmt_get_result($stmt);
+                                while ($row = mysqli_fetch_assoc($result)) {
+                                    $reservations[] = [
+                                        'id' => $row['id'],
+                                        'car_model' => htmlspecialchars($row['car_model']),
+                                        'pickup_date' => htmlspecialchars($row['pickup_date']),
+                                        'return_date' => htmlspecialchars($row['return_date']),
+                                        'status' => htmlspecialchars($row['status']),
+                                    ];
+                                }
+                                mysqli_stmt_close($stmt);
+                            } else {
+                                echo "<p class='text-danger'>Error loading reservations.</p>";
+                            }
+                            ?>
+
+                            <?php if (empty($reservations)): ?>
+                                <p class="text-muted">No rentals found for this customer.</p>
+                            <?php else: ?>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-striped align-middle">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Car</th>
+                                                <th>Pickup Date</th>
+                                                <th>Return Date</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($reservations as $res): ?>
+                                                <tr>
+                                                    <td><?= $res['id']; ?></td>
+                                                    <td><?= $res['car_model']; ?></td>
+                                                    <td><?= $res['pickup_date']; ?></td>
+                                                    <td><?= $res['return_date']; ?></td>
+                                                    <td><?= $res['status']; ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <?php endforeach; ?>
+
+
 
         <!-- Admin Profile Edit -->
         <div class="tab-content hidden" id="profile-tab">
@@ -912,8 +995,7 @@ if ($result_customers) {
                     <p id="adminLocation"><?php echo $admin_location; ?></p>
                 </div>
 
-                <button aria-label="edit admin information" class="modify-button" id="modifyBtn" type="button"
-                    onclick="editAdmin()">
+                <button aria-label="edit admin information" class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#editAdminModal">
                     Edit
                 </button>
 
@@ -956,40 +1038,58 @@ if ($result_customers) {
             </div>
 
             <!-- Edit Admin Modal -->
-            <div class="popup" id="editPopup">
-                <div class="popup-content">
-                    <div class="popup-header">
-                        <h3 class="popup-title" id="popupTitle">Edit Admin Information </h3>
+            <div class="modal fade" id="editAdminModal" tabindex="-1" aria-labelledby="editAdminModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered">
+                    <div class="modal-content">
+                        <form id="editForm" method="POST" enctype="multipart/form-data">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="editAdminModalLabel">Edit Admin Information</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label for="nameInput" class="form-label">Name</label>
+                                    <input id="nameInput" name="name" type="text" class="form-control" required value="<?php echo htmlspecialchars($admin_name); ?>">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="emailInput" class="form-label">Email</label>
+                                    <input id="emailInput" name="email" type="email" class="form-control" required value="<?php echo htmlspecialchars($admin_email); ?>">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="phoneInput" class="form-label">Phone</label>
+                                    <input id="phoneInput" name="phone" type="tel" class="form-control" required value="<?php echo htmlspecialchars($admin_phone); ?>">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="locationInput" class="form-label">Location</label>
+                                    <input id="locationInput" name="location" type="text" class="form-control" required value="<?php echo htmlspecialchars($admin_location); ?>">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="profilePhotoInputModal" class="form-label">Profile Photo</label>
+                                    <input type="file" id="profilePhotoInputModal" name="profilePhotoInputModal" class="form-control" accept="image/*">
+                                    <small class="form-text text-muted">Leave blank to keep current photo</small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="licenseInputModal" class="form-label">Driver's License Image</label>
+                                    <input type="file" id="licenseInputModal" name="licenseInputModal" class="form-control" accept="image/*">
+                                    <small class="form-text text-muted">Leave blank to keep current image</small>
+                                </div>
+                            </div>
+
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Save</button>
+                            </div>
+                        </form>
                     </div>
-
-                    <form action="" class="" id="editForm" method="POST" enctype="multipart/form-data">
-                        <label for="nameInput"> Name </label>
-                        <input id="nameInput" name="name" required type="text" value="<?php echo htmlspecialchars($admin_name); ?>" />
-                        <label for="emailInput"> Email </label>
-                        <input id="emailInput" name="email" required type="email" value="<?php echo htmlspecialchars($admin_email); ?>" />
-                        <label for="phoneInput"> Phone </label>
-                        <input id="phoneInput" name="phone" required type="tel" value="<?php echo htmlspecialchars($admin_phone); ?>" />
-                        <label for="locationInput"> Location </label>
-                        <input id="locationInput" name="location" required type="text" value="<?php echo htmlspecialchars($admin_location); ?>" />
-
-                        <!-- Moved file inputs into the modal form -->
-                        <label for="profilePhotoInputModal">Profile Photo</label>
-                        <input type="file" id="profilePhotoInputModal" name="profilePhotoInputModal" accept="image/*" />
-                        <small>Leave blank to keep current photo</small>
-
-                        <label for="licenseInputModal" style="margin-top: 15px;">Driver's License Image</label>
-                        <input type="file" id="licenseInputModal" name="licenseInputModal" accept="image/*" />
-                        <small>Leave blank to keep current image</small>
-
-                        <div class="popup-buttons">
-                            <button class="btn cancel-btn" id="cancelBtn" type="button" onclick="closepopup()">
-                                Cancel
-                            </button>
-                            <button class="btn save-btn" type="submit">Save</button>
-                        </div>
-                    </form>
                 </div>
             </div>
+
 
     </main>
 

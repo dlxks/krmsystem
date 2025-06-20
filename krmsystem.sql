@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 19, 2025 at 06:24 PM
+-- Generation Time: Jun 20, 2025 at 02:43 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -43,7 +43,7 @@ CREATE TABLE `admins` (
 --
 
 INSERT INTO `admins` (`id`, `name`, `password`, `email`, `phone`, `location`, `profile_photo_path`, `license_image_path`) VALUES
-(1, 'admin', '$2y$10$6xrkpe.ieuBM27SFk6hKlu2nuoViDXhnuruhcE15IdTKJLDkmDqHe', 'admin@gmail.com', '09751563360', 'nia road', '6853e1a443fcb_death13.png', '6853e1ab75082_VI.png');
+(1, 'admin', '$2y$10$6xrkpe.ieuBM27SFk6hKlu2nuoViDXhnuruhcE15IdTKJLDkmDqHe', 'admin@gmail.com', '09751563360', 'nia road 1', '6853e1a443fcb_death13.png', '6853e1ab75082_VI.png');
 
 -- --------------------------------------------------------
 
@@ -113,7 +113,7 @@ INSERT INTO `customers` (`id`, `name`, `email`, `password`, `driver_license_numb
 (16, 'janessa mariel samonte cruz', 'janessa@gmail.com', '', '1214asd', 'gentri, cavite', 'Janessa Cruz', '09391187259', NULL, NULL),
 (17, '', '', '$2y$10$viMzluSdbA2aDJJNGQ5xPe6Eod4N10w6xU2B5Fi0HqGOQCDFTpB4O', '', 'asd', '', '', NULL, NULL),
 (18, 'Tristan', 'sangangbayant@gmail.com', '$2y$10$uNdvV9IVBphMCgpsD6C.JO6PHJw0gXdZmxkZVMdxQ4vtn2Lmwl1s6', 'asd', 'harasan indang', 'tristan', '09072203267', NULL, NULL),
-(20, 'asd', 'asd@asd.com', '$2y$10$/SqMWqaEKQNb4Da2H3/QVes5oWJF33/mboRoTOGRzhgJriaEtiYtm', 'asddd', 'harsan', 'tristan', '09072203267', NULL, NULL),
+(20, 'tristan', 'asd@asd.com', '$2y$10$/SqMWqaEKQNb4Da2H3/QVes5oWJF33/mboRoTOGRzhgJriaEtiYtm', 'asddd', 'asdasdad', 'asd', '09123142345', NULL, NULL),
 (22, 'Tristan', 'sangangbayanst@gmail.com', '', 'asdasd', 'harasan indang', 'tristan s', '09558076388', NULL, NULL);
 
 -- --------------------------------------------------------
@@ -124,11 +124,14 @@ INSERT INTO `customers` (`id`, `name`, `email`, `password`, `driver_license_numb
 
 CREATE TABLE `feedbacks` (
   `id` int(11) NOT NULL,
+  `reservation_id` int(11) NOT NULL,
+  `customer_id` int(11) NOT NULL,
   `name` varchar(255) NOT NULL,
   `phone_number` varchar(20) NOT NULL,
   `car_id` int(11) DEFAULT NULL,
   `rating` int(11) NOT NULL,
   `comments` text NOT NULL,
+  `status` enum('pending','completed') NOT NULL DEFAULT 'pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -136,10 +139,13 @@ CREATE TABLE `feedbacks` (
 -- Dumping data for table `feedbacks`
 --
 
-INSERT INTO `feedbacks` (`id`, `name`, `phone_number`, `car_id`, `rating`, `comments`, `created_at`) VALUES
-(2, 'yuki', '09164475181', NULL, 5, '                       aaa ', '2025-06-11 03:03:51'),
-(3, 'john', '09201898949', 13, 4, '                        nice car', '2025-06-18 07:01:23'),
-(4, 'jj', '09201898944', 14, 5, '                        ', '2025-06-18 07:01:57');
+INSERT INTO `feedbacks` (`id`, `reservation_id`, `customer_id`, `name`, `phone_number`, `car_id`, `rating`, `comments`, `status`, `created_at`) VALUES
+(2, 0, 0, 'yuki', '09164475181', NULL, 5, '                       aaa ', 'pending', '2025-06-11 03:03:51'),
+(3, 0, 0, 'john', '09201898949', 13, 4, '                        nice car', 'pending', '2025-06-18 07:01:23'),
+(4, 0, 0, 'jj', '09201898944', 14, 5, '                        ', 'pending', '2025-06-18 07:01:57'),
+(7, 39, 20, 'Tristan', '09072203267', 14, 4, 'good', 'completed', '2025-06-19 22:42:59'),
+(8, 39, 20, '', '', 14, 0, '', 'pending', '2025-06-20 00:43:13'),
+(9, 40, 20, '', '', 15, 0, '', 'pending', '2025-06-20 00:43:16');
 
 -- --------------------------------------------------------
 
@@ -171,7 +177,9 @@ INSERT INTO `reservations` (`id`, `car_id`, `customer_id`, `status`, `pickup_dat
 (26, 13, 12, 'in-route', '2025-06-18', '2025-06-21', 6, '', '', 'Rosario, Cavite', 0.00, '2025-06-18 06:11:58'),
 (27, 13, 13, 'reserved', '2025-06-20', '2025-06-22', 4, '', 'child seat', 'gentri', 0.00, '2025-06-18 06:39:08'),
 (28, 14, 14, 'completed', '2025-06-19', '2025-06-21', 6, 'in town', 'entertainment system', 'sm tanza', 0.00, '2025-06-18 06:43:27'),
-(29, 15, 15, 'completed', '2025-06-20', '2025-06-25', 4, '', 'child seat', 'rosario, cavite', 0.00, '2025-06-18 06:55:53');
+(29, 15, 15, 'completed', '2025-06-20', '2025-06-25', 4, '', 'child seat', 'rosario, cavite', 0.00, '2025-06-18 06:55:53'),
+(39, 14, 20, 'completed', '2025-06-20', '2025-06-21', 10, 'asd test', 'test', 'indang', 2500.00, '2025-06-19 22:16:43'),
+(40, 15, 20, 'completed', '2025-06-20', '2025-06-21', 4, '3', '3', 'asd', 2500.00, '2025-06-20 00:42:40');
 
 --
 -- Indexes for dumped tables
@@ -228,7 +236,7 @@ ALTER TABLE `admins`
 -- AUTO_INCREMENT for table `cars`
 --
 ALTER TABLE `cars`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT for table `customers`
@@ -240,13 +248,13 @@ ALTER TABLE `customers`
 -- AUTO_INCREMENT for table `feedbacks`
 --
 ALTER TABLE `feedbacks`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `reservations`
 --
 ALTER TABLE `reservations`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
 
 --
 -- Constraints for dumped tables
