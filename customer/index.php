@@ -220,6 +220,7 @@ $reservation_sql = "
     WHERE r.customer_id = ?
     ORDER BY r.created_at DESC
 ";
+
 $res_stmt = mysqli_prepare($conn, $reservation_sql);
 mysqli_stmt_bind_param($res_stmt, "i", $customer_id);
 mysqli_stmt_execute($res_stmt);
