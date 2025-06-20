@@ -1,6 +1,7 @@
 <?php
 session_start();
 include '../conn.php';
+include '../check_customer_session.php';
 
 // Check if customer is logged in
 if (!isset($_SESSION['customer_id'])) {

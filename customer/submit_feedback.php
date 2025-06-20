@@ -1,6 +1,7 @@
 <?php
 session_start();
 include '../conn.php';
+include '../check_customer_session.php';
 
 $feedback_id = $_POST['feedback_id'];
 $rating = $_POST['rating'];

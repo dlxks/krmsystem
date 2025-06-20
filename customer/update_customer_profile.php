@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once '../conn.php'; // or update to your DB include path
+include '../check_customer_session.php';
 
 if (!isset($_SESSION["customer_id"])) {
     die("Unauthorized access.");

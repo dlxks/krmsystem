@@ -2,6 +2,7 @@
 session_start();
 
 include '../conn.php';
+include '../check_customer_session.php';
 
 // Function to set a message in session for the parent page to display
 function set_parent_message($message, $type = 'success', $redirect_tab = 'vehicles-tab')

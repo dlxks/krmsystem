@@ -1,37 +1,35 @@
 <?php
 session_start();
 include '../conn.php';
-
+include '../check_customer_session.php';
 
 $display_message = '';
 $message_type = ''; // 'success' or 'error'
 
-// Logout function
+// Logout
 if (isset($_GET['logout']) && $_GET['logout'] === 'true') {
     session_destroy();
-    // Redirect to index.php and specifically to the 'home' tab
     header("Location: ../");
     exit();
 }
 
-// Check for messages from session
+// Session message handler
 if (isset($_SESSION['response_message'])) {
     $display_message = $_SESSION['response_message'];
-    $message_type = $_SESSION['response_type'] ?? 'success'; // Default to success if type not set
-    // Clear the session variables after displaying
-    unset($_SESSION['response_message']);
-    unset($_SESSION['response_type']);
+    $message_type = $_SESSION['response_type'] ?? 'success';
+    unset($_SESSION['response_message'], $_SESSION['response_type']);
 }
 
-// Function to set a message for display (used within this page's PHP logic)
+// Message setter
 function set_message($message, $type = 'success')
 {
     $_SESSION['response_message'] = $message;
     $_SESSION['response_type'] = $type;
 }
 
+$customer_id = $_SESSION['customer_id'];
 
-// --- PHP for fetching car data for Rentals Tab and Car Details Modal ---
+// Fetch all cars
 $cars_data = [];
 $sql_cars = "SELECT * FROM cars";
 $result_cars = mysqli_query($conn, $sql_cars);
@@ -41,41 +39,39 @@ if ($result_cars) {
     }
 } else {
     set_message('Error fetching car data: ' . mysqli_error($conn), 'error');
-    error_log('[KRM ERROR] Error fetching car data: ' . mysqli_error($conn)); // Debugging log
+    error_log('[KRM ERROR] Error fetching car data: ' . mysqli_error($conn));
 }
 
-// --- PHP for handling Reservation Form Submission ---
+// Reservation form handler
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['form_type']) && $_POST['form_type'] === 'reservation') {
     require_once '../conn.php';
 
-    // Basic sanitization
-    $fullName         = trim($_POST['fullName']);
-    $licenseNumber    = trim($_POST['licenseNumber']);
-    $email            = trim($_POST['email']);
-    $address          = trim($_POST['address']);
-    $messengerName    = trim($_POST['messengerName']);
-    $phoneNumber      = trim($_POST['phoneNumber']);
-    $rentalCarId      = (int) $_POST['rentalCar'];
-    $pickupDate       = $_POST['pickupDate'];
-    $returnDate       = $_POST['returnDate'];
-    $pickupLocation   = trim($_POST['pickupLocation']);
-    $passengerCount   = (int) $_POST['passengerCount'];
-    $accommodations   = trim($_POST['accommodations']);
-    $specialRequests  = trim($_POST['specialRequests']);
-    $estimatedPrice = isset($_POST['estimatedPrice']) && is_numeric($_POST['estimatedPrice'])
+    $fullName        = trim($_POST['fullName']);
+    $licenseNumber   = trim($_POST['licenseNumber']);
+    $email           = trim($_POST['email']);
+    $address         = trim($_POST['address']);
+    $messengerName   = trim($_POST['messengerName']);
+    $phoneNumber     = trim($_POST['phoneNumber']);
+    $rentalCarId     = (int) $_POST['rentalCar'];
+    $pickupDate      = $_POST['pickupDate'];
+    $returnDate      = $_POST['returnDate'];
+    $pickupLocation  = trim($_POST['pickupLocation']);
+    $passengerCount  = (int) $_POST['passengerCount'];
+    $accommodations  = trim($_POST['accommodations']);
+    $specialRequests = trim($_POST['specialRequests']);
+    $estimatedPrice  = isset($_POST['estimatedPrice']) && is_numeric($_POST['estimatedPrice'])
         ? number_format((float)$_POST['estimatedPrice'], 2, '.', '')
         : 0.00;
 
-
-    $carStatus        = "rented";
-    $status           = "pending";
+    $carStatus       = "rented";
+    $status          = "pending";
 
     error_log("[KRM DEBUG] Reservation submission received: $fullName, $email");
 
     $customer_id = null;
     $customer_found = false;
 
-    // ✅ Check customer by email
+    // Lookup by email
     if (!empty($email)) {
         $sql = "SELECT id FROM customers WHERE email = ?";
         $stmt = mysqli_prepare($conn, $sql);
@@ -94,7 +90,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['form_type']) && $_POS
         }
     }
 
-    // ✅ If not found, check by license number
+    // Lookup by license
     if (!$customer_found && !empty($licenseNumber)) {
         $sql = "SELECT id FROM customers WHERE driver_license_number = ?";
         $stmt = mysqli_prepare($conn, $sql);
@@ -113,15 +109,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['form_type']) && $_POS
         }
     }
 
-    // ✅ Update or insert customer
+    // Update or insert customer
     if ($customer_found) {
         $sql = "UPDATE customers SET name=?, email=?, address=?, messenger_name=?, phone_number=? WHERE id=?";
         $stmt = mysqli_prepare($conn, $sql);
         if ($stmt) {
             mysqli_stmt_bind_param($stmt, "sssssi", $fullName, $email, $address, $messengerName, $phoneNumber, $customer_id);
-            if (mysqli_stmt_execute($stmt)) {
-                error_log("[KRM DEBUG] Customer profile updated. ID: $customer_id");
-            } else {
+            if (!mysqli_stmt_execute($stmt)) {
                 set_message('Error updating customer: ' . mysqli_error($conn), 'error');
                 header("Location: index.php?tab=reservation");
                 exit();
@@ -154,7 +148,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['form_type']) && $_POS
         }
     }
 
-    // ✅ Check if car is already rented
+    // Check car availability
     $sql = "SELECT status FROM cars WHERE id = ?";
     $stmt = mysqli_prepare($conn, $sql);
     if ($stmt) {
@@ -171,9 +165,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['form_type']) && $_POS
         }
     }
 
-    // ✅ Insert reservation
-    $sql = "INSERT INTO reservations (customer_id, car_id, pickup_date, return_date, pickup_location, passenger_count, accommodations, special_requests, estimated_price, status) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    // Insert reservation
+    $sql = "INSERT INTO reservations (customer_id, car_id, pickup_date, return_date, pickup_location, passenger_count, accommodations, special_requests, estimated_price, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     $stmt = mysqli_prepare($conn, $sql);
     if ($stmt) {
         mysqli_stmt_bind_param($stmt, "iisssissss", $customer_id, $rentalCarId, $pickupDate, $returnDate, $pickupLocation, $passengerCount, $accommodations, $specialRequests, $estimatedPrice, $status);
@@ -181,7 +174,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['form_type']) && $_POS
             $reservation_id = mysqli_insert_id($conn);
             error_log("[KRM DEBUG] Reservation inserted. ID: $reservation_id");
 
-            // ✅ Update car status to "rented"
             $update_sql = "UPDATE cars SET status = ? WHERE id = ?";
             $update_stmt = mysqli_prepare($conn, $update_sql);
             if ($update_stmt) {
@@ -209,9 +201,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['form_type']) && $_POS
     }
 }
 
-$customer_id = $_SESSION['customer_id'];
-
-// Fetch reservations with car and customer info
+// Fetch customer reservations
 $reservation_sql = "
     SELECT r.*, c.make, c.model, c.year, cust.name AS customer_name, cust.phone_number
     FROM reservations r
@@ -220,7 +210,6 @@ $reservation_sql = "
     WHERE r.customer_id = ?
     ORDER BY r.created_at DESC
 ";
-
 $res_stmt = mysqli_prepare($conn, $reservation_sql);
 mysqli_stmt_bind_param($res_stmt, "i", $customer_id);
 mysqli_stmt_execute($res_stmt);
@@ -228,10 +217,7 @@ $res_result = mysqli_stmt_get_result($res_stmt);
 $reservations = mysqli_fetch_all($res_result, MYSQLI_ASSOC);
 mysqli_stmt_close($res_stmt);
 
-// Check for pending feedbacks  
-$pending_feedbacks = [];
-
-// Fetch pending feedbacks
+// Pending feedbacks
 $sql = "
     SELECT f.id AS feedback_id, r.id AS reservation_id, c.make, c.model, c.year
     FROM feedbacks f
@@ -246,7 +232,7 @@ $result = mysqli_stmt_get_result($stmt);
 $pending_feedbacks = mysqli_fetch_all($result, MYSQLI_ASSOC);
 mysqli_stmt_close($stmt);
 
-// Fetch all feedbacks (completed or pending)
+// All feedbacks
 $feedbacks_query = mysqli_prepare($conn, "
     SELECT f.*, c.make, c.model, c.year 
     FROM feedbacks f
@@ -257,8 +243,7 @@ mysqli_stmt_bind_param($feedbacks_query, "i", $customer_id);
 mysqli_stmt_execute($feedbacks_query);
 $feedbacks_result = mysqli_stmt_get_result($feedbacks_query);
 
-// Fetch customer name and phone number
-$customer_info = [];
+// Customer info
 $customer_query = mysqli_prepare($conn, "SELECT name, phone_number FROM customers WHERE id = ?");
 mysqli_stmt_bind_param($customer_query, "i", $customer_id);
 mysqli_stmt_execute($customer_query);
@@ -266,6 +251,7 @@ $customer_result = mysqli_stmt_get_result($customer_query);
 $customer_info = mysqli_fetch_assoc($customer_result);
 mysqli_stmt_close($customer_query);
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 

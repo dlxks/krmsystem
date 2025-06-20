@@ -13,6 +13,7 @@ if ($result_cars) {
 } else {
     set_message('Error fetching car data: ' . mysqli_error($conn), 'error');
     error_log('[KRM ERROR] Error fetching car data: ' . mysqli_error($conn)); // Debugging log
+
 }
 ?>
 
@@ -89,6 +90,17 @@ if ($result_cars) {
                 </div>
             </div>
         </nav>
+
+        <div class="container">
+            <!-- Alert Banner -->
+            <?php if (isset($_COOKIE['err_message'])): ?>
+                <div class="alert <?= htmlspecialchars($_COOKIE['message_class']) ?> alert-dismissible fade show" role="alert">
+                    <?= htmlspecialchars($_COOKIE['err_message']) ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <?php endif; ?>
+            <!-- End Alert Banner -->
+        </div>
 
         <!-- Shared Background Carousel for Hero + Features -->
         <section class="position-relative text-white" style="overflow: hidden;">
