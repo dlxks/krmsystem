@@ -222,28 +222,7 @@ if ($result_cars) {
             </div>
         </div>
 
-
-        <section class="container py-5" id="feedback">
-            <h2 class="text-center mb-4">Customer Feedback</h2>
-            <div class="table-responsive">
-                <table class="table table-bordered table-striped">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>#</th>
-                            <th>Name</th>
-                            <th>Vehicle</th>
-                            <th>Rating</th>
-                            <th>Comment</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Dynamically injected feedback rows using PHP -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <section class="bg-light py-5" id="about">
+        <section class="py-5" id="about">
             <div class="container text-center">
                 <h2>About KRM Rent a Car</h2>
                 <p class="lead">We're passionate about getting you safely on the road with style and ease.</p>
