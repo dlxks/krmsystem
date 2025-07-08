@@ -978,7 +978,7 @@ mysqli_stmt_close($customer_query);
                                         </div>
 
                                         <div class="mt-4 pt-2 text-center">
-                                            <input data-mdb-ripple-init class="btn btn-primary btn-lg" type="submit" value="Update Profile" />
+                                            <input data-mdb-ripple-init class="btn btn-primary" type="submit" value="Update Profile" />
                                         </div>
                                     </form>
                                 </div>
